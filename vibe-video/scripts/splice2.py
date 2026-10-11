@@ -1,35 +1,53 @@
 #!/usr/bin/env python3
-# Build the final cut from film_v1 plus re-rendered segments; later layers override earlier ones.
-# 用法：整片放 out/film_v1.mp4，重渲的段命名 seg_起帧-止帧.mp4 放进下面 d 列表的目录，跑完出 out/film_v3.mp4，再重新混音。路径按需改。
-import subprocess, glob, re
-N = 5250
-layers = [('out/film_v1.mp4', 0, N - 1)]
-for d in ['out', 'out/s2', 'out/s3']:
-    for f in sorted(glob.glob(f'{d}/seg_*.mp4')):
-        a, b = map(int, re.findall(r'seg_(\d+)-(\d+)', f)[0])
-        layers.append((f, a, b))
-owner = [0] * N
-for li, (_, a, b) in enumerate(layers):
-    for k in range(a, b + 1):
-        owner[k] = li
+"""用 seg_起帧-止帧.mp4 按帧覆盖原视频；参数顺序靠后的片段优先。"""
+import argparse, json, re, subprocess
+from fractions import Fraction
+from pathlib import Path
+
+p = argparse.ArgumentParser(description=__doc__)
+p.add_argument('video', type=Path)
+p.add_argument('out', type=Path)
+p.add_argument('segments', nargs='+', type=Path)
+a = p.parse_args()
+def info(file):
+    if not file.is_file() or file.resolve() == a.out.resolve():
+        p.error('input is missing or equals output')
+    data = json.loads(subprocess.check_output(['ffprobe', '-v', 'error', '-count_frames', '-select_streams', 'v:0', '-show_entries', 'stream=nb_read_frames,avg_frame_rate,width,height', '-of', 'json', str(file)]))
+    if not data['streams']:
+        p.error('input has no video stream')
+    return data['streams'][0]
+base = info(a.video)
+n = int(base['nb_read_frames'])
+layers = [(a.video, 0, n-1)]
+for file in a.segments:
+    match = re.fullmatch(r'seg_(\d+)-(\d+)', file.stem)
+    if not match:
+        p.error('segment filenames must be seg_start-end.mp4')
+    start, end = map(int, match.groups())
+    if not 0 <= start <= end < n:
+        p.error('segment range must be within original video')
+    meta = info(file)
+    if int(meta['nb_read_frames']) != end-start+1 or any(meta[k] != base[k] for k in ('width', 'height')) or Fraction(meta['avg_frame_rate']) != Fraction(base['avg_frame_rate']):
+        p.error('segment frame count, dimensions or FPS do not match')
+    layers.append((file, start, end))
+owner = [0] * n
+for i, (_, start, end) in enumerate(layers):
+    owner[start:end+1] = [i] * (end-start+1)
 runs = []
-for k in range(N):
-    if runs and runs[-1][0] == owner[k]:
-        runs[-1][2] = k
+for frame, layer in enumerate(owner):
+    if runs and runs[-1][0] == layer:
+        runs[-1][2] = frame
     else:
-        runs.append([owner[k], k, k])
-inputs, fc, labels = [], [], []
-for i, (li, a, b) in enumerate(runs):
-    f, s0, _ = layers[li]
-    if f not in inputs:
-        inputs.append(f)
-    ii = inputs.index(f)
-    fc.append(f'[{ii}:v]trim=start_frame={a - s0}:end_frame={b - s0 + 1},setpts=PTS-STARTPTS[v{i}]')
+        runs.append([layer, frame, frame])
+cmd = ['ffmpeg', '-n', '-v', 'error']
+for file, _, _ in layers:
+    cmd += ['-i', str(file)]
+fc, labels = [], []
+for i, (layer, start, end) in enumerate(runs):
+    origin = layers[layer][1]
+    fc.append(f'[{layer}:v]trim=start_frame={start-origin}:end_frame={end-origin+1},setpts=PTS-STARTPTS[v{i}]')
     labels.append(f'[v{i}]')
-    print(f, a, b)
 fc.append(''.join(labels) + f'concat=n={len(labels)}:v=1:a=0[v]')
-cmd = ['ffmpeg', '-y', '-v', 'error']
-for f in inputs:
-    cmd += ['-i', f]
-cmd += ['-filter_complex', ';'.join(fc), '-map', '[v]', '-c:v', 'libx264', '-preset', 'slow', '-crf', '18', '-pix_fmt', 'yuv420p', '-r', '30', 'out/film_v3.mp4']
-subprocess.run(cmd, check=True)
+a.out.parent.mkdir(parents=True, exist_ok=True)
+subprocess.run(cmd + ['-filter_complex', ';'.join(fc), '-map', '[v]', '-an', '-c:v', 'libx264', '-crf', '18', '-pix_fmt', 'yuv420p', '-r', base['avg_frame_rate'], str(a.out)], check=True)
+print(a.out, '(silent; mix audio after splicing)')

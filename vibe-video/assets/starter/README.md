@@ -1,20 +1,31 @@
-# vibe 视频起手工程
+# 独立 Remotion 起手工程
 
-175 秒、1920×1080、30fps、纯字幕。组件来自第 8 支《你说话越来越像 AI》。
+默认 175 秒、1920×1080、30fps、纯字幕，`public/bgm.mp3` 已包含默认背景音乐。场景与引用是演示占位内容，需要按分镜替换；12 秒后的画面尚未制作，模板本身不是完整的知识短片。
+
+先将整个 `starter` 目录复制到自己的持久工作目录。以下命令在复制后的工程内执行：
 
 ```bash
-cp -r assets/starter /home/claude/vN && cd /home/claude/vN
-npm i
-ls -d /opt/pw-browsers/chromium_headless_shell-*/chrome-linux/headless_shell > .browser
-cp /mnt/project-files/背景音乐.mp3 public/bgm.mp3
-python3 gen_chars.py                       # 改完任何文字都重跑
-node stills.mjs t0 default 1 4 8.5         # 抽帧到 st/t0/，有 3D 段时第二个参数写 swangle
-python3 sheet.py st/t0 3                   # 拼联系表，Read 图自查
-bash render.sh                             # 分段渲染 + 混 BGM，出 out/hd.mp4
+npm install
+npx remotion browser ensure
+npm run chars
+npm run studio
 ```
 
-- `src/timeline.ts`：全片台词、左上 HUD、右上引用卡。改字只改这里。
-- `src/ui.tsx`：字幕（逐字浮现、【】暖色、〖〗冷色）、HUD、引用卡和印章、底板、`FX` 进出场、`camAt` 运镜、`Motes` 漂浮物、颗粒、暗角。
-- `src/fonts.ts`：字体预加载，模块顶层调用。
-- `src/scenes.tsx`：两个示例场景，照这个写法一场一个组件。
-- `src/Video.tsx`：总装，后出场的场景写在前面。
+安装需要联网，要求 Node.js 22 或更新的受支持 LTS 版本，文字收集需要 Python 3；Remotion 自动管理适合当前平台的浏览器，无需 `.browser` 文件。 Linux 需按 [Remotion Linux 依赖说明](https://www.remotion.dev/docs/miscellaneous/linux-dependencies) 安装浏览器共享库。
+
+```bash
+node stills.mjs check default 1 4 8.5
+npm run render
+```
+
+抽帧保存到 `st/check/`，成片带默认音乐并保存到 `out/hd.mp4`。`npm run studio` 中也能试听音乐。按需使用 `CONC=4 npm run render` 调整并发，或 `GL=swangle npm run render` 使用软件 WebGL。Windows 可在 Git Bash 中运行 `render.sh`，也可直接执行 `npx remotion render src/index.ts Film out/hd.mp4 --crf=16 --audio-bitrate=256k`。
+
+- `src/timeline.ts`：时长、帧率、字幕、HUD 和引用；编辑文字后运行 `npm run chars`。
+- `src/scenes.tsx`：两个示例场景；添加全片所需场景。
+- `src/Video.tsx`：场景与叠层总装，以及音乐淡入淡出。
+- `src/ui.tsx` / `src/fonts.ts`：视觉组件和字体预加载。
+- `public/bgm.mp3`：默认音乐，约 175.073 秒；直接替换同名文件可换音乐。
+
+拼联系表需要 Python 3 和 Pillow：`python3 -m pip install Pillow`，然后运行 `python3 sheet.py st/check 3`。可选音效、混音和局部拼接工具见 skill 的制作手册；它们需要额外依赖，不影响默认渲染。
+
+默认视频使用前 175 秒，开始淡入 0.3 秒，结束前 3.5 秒淡出。改变 `DURATION` 时同时调整分镜；长于音乐的部分不会自动循环音乐。

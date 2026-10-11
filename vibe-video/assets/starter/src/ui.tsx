@@ -9,7 +9,7 @@ export const HAND = '"Long Cang", "Noto Serif SC", cursive';
 export const BRUSH = '"Zhi Mang Xing", "Long Cang", cursive';
 export const MONO = '"JetBrains Mono", monospace';
 
-// 一个颜色只表达一个意思，全片不改口。这里是第 8 支的配色：暖锈金 = 人 / 刀子，冷青 = AI；换片改这一组即可
+// 一个颜色只表达一个意思，全片不改口。默认暖金与冷青配色；按本片主题调整这一组
 export const WARM = '#e3a35f';
 export const WARM_L = '#ffdcb0';
 export const WARM_D = '#8a4a22';
@@ -144,7 +144,7 @@ const renderMarked = (s: string, t: number, start: number, flashAt?: number) => 
         {chars.map((ch, j) => {
           const p = easeOut(ramp(t, start + idx * 0.028, start + idx++ * 0.028 + 0.45));
           const last = k === parts.length - 1 && j === chars.length - 1;
-          // flash：这句最后一个字在 flashAt 秒闪一下冷色（第 8 支片尾的句号彩蛋）
+          // flash：这句最后一个字在 flashAt 秒闪一下冷色（可选的片尾强调）
           const fl = last && flashAt !== undefined ? win(t, flashAt, flashAt + 1.1, 0.06, 0.55) : 0;
           return (
             <span

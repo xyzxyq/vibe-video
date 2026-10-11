@@ -1,6 +1,6 @@
 // 全片文字都在这里：改台词只改这个文件，改完跑一次 `python3 gen_chars.py`
 export const FPS = 30;
-export const DURATION = 175; // 配满《若如初见》
+export const DURATION = 175; // 与随附的默认背景音乐配合
 
 // 字幕：【】= 暖色高亮（刀子），〖〗= 冷色；每屏最多两行、每句至少 1.5 秒、单行超过约 25 字就拆
 export type Cap = {s: number; e: number; text: string; flash?: number};

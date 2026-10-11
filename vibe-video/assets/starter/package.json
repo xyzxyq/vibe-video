@@ -16,16 +16,19 @@
     "@fontsource/noto-serif-sc": "^5.3.0",
     "@fontsource/zhi-mang-xing": "^5.3.0",
     "@react-three/fiber": "^9.8.1",
-    "@remotion/bundler": "^4.0.533",
-    "@remotion/cli": "^4.0.533",
-    "@remotion/renderer": "^4.0.533",
-    "@remotion/three": "^4.0.533",
+    "@remotion/bundler": "4.0.533",
+    "@remotion/cli": "4.0.533",
+    "@remotion/renderer": "4.0.533",
+    "@remotion/three": "4.0.533",
     "@types/react": "^19.3.0",
     "@types/three": "^0.170.0",
     "react": "^19.3.0",
     "react-dom": "^19.3.0",
-    "remotion": "^4.0.533",
+    "remotion": "4.0.533",
     "three": "^0.170.0",
     "typescript": "^5.6.0"
+  },
+  "engines": {
+    "node": ">=22"
   }
 }

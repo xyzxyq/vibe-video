@@ -1,114 +1,101 @@
+# Remotion 制作手册
 
-# vibe 视频：Remotion 制作手册
+本手册配合 [SKILL.md](../SKILL.md) 使用，所有资源均来自本 skill。命令中的路径相对于复制后的工程，不引用历史源码包或聊天。
 
-总流程、用户口味和硬规矩在 本 skill 的 `SKILL.md`；交付前逐帧审片在 `references/review.md`。这里只管怎么把脚本做成片。
+## 创建独立工程
 
-## 一、起工程：从最近一支的源码改，别从零搭
-
-容器 `/home/claude` 不持久，所有成品和源码最后都要进 `/mnt/project-files/第N支/`。
-
-| 源码包 | 适合改成什么 |
-|---|---|
-| `第8支/像AI_Remotion源码.tar.gz` | **默认起点**。最新、最干净：timeline.ts + 分场景文件 + 字幕/HUD/引用/底板/声波转场/计数器 + 音效合成 + 分段渲染 + 抽帧拼图 |
-| `第7支/友谊悖论_Remotion源码.tar.gz` | 纯 2D/SVG，同学录、星图 |
-| `第6支/楚门_Remotion源码.tar.gz` | 2D 为主 + 一段 Three.js（只有那段开 swangle） |
-| `第4支/remotion工程源码.tar.gz` | 多段 Three.js（深海、沉船），swangle 分段渲染样板 |
-| `第5支_奶蛙/奶蛙_Remotion源码.tar.gz` | 图片还原成粒子（rembg 抠图 + 逐像素取色）、线装书 2.5D、笑声混音、局部重渲拼接；`tools/` 有预处理脚本 |
-| `第3支_男女与缘分/remotion工程源码.tar.gz` | 水墨风、canvas 自写 3D 投影（族谱树、d3-geo 地球），无 WebGL |
-| `生与死/remotion工程源码_v2.tar.gz` | 4400 颗金色粒子编队、Three.js 原子/DNA、CAM 关键帧虚拟摄影机 |
+将 `assets/starter/` 整个目录复制到自己的工作目录并命名为 `video-project`。支持 macOS、Linux；Windows 的 shell 命令可在 Git Bash 中执行，Remotion 命令也可直接在终端执行。
 
 ```bash
-mkdir -p /home/claude/vN && cd /home/claude/vN
-tar xzf "/mnt/project-files/第8支/像AI_Remotion源码.tar.gz" && cd v8   # 包里的目录名
-npm i            # 或者从还活着的上一个工程直接拷 node_modules，快很多
-cat .browser     # headless chromium 路径，换环境要改：ls -d /opt/pw-browsers/chromium_headless_shell-*/chrome-linux/headless_shell
+cd video-project
+npm install
+npx remotion browser ensure
+npm run chars
+npm run studio
 ```
 
-改名：`render.sh` 里的 `cd` 路径和 composition id，`Root.tsx` 的 id。
+需要 Node.js 22 或更新的受支持 LTS 版本、npm、Python 3（文字收集）和网络连接。浏览器通过 [Remotion 自带的下载与管理机制](https://www.remotion.dev/docs/miscellaneous/chrome-headless-shell) 获取，无需预装某个路径下的 Chromium。 Linux 需按 [Remotion Linux 依赖说明](https://www.remotion.dev/docs/miscellaneous/linux-dependencies) 安装浏览器共享库。Remotion 相关包使用同一版本，`package-lock.json` 固定具体依赖；已生成锁文件时可用 `npm ci`。
 
-**项目文件夹里找不到源码包时**（新项目、换了环境），用本 skill 自带的起手工程 `assets/starter/`：字幕/HUD/引用卡/印章/底板/运镜/颗粒/暗角组件（`src/ui.tsx`，就是第 8 支的那套，配色改成 `WARM`/`COLD` 两个语义色）、字体预加载（`src/fonts.ts`）、两个示例场景、分段渲染 `render.sh`（第四列写 `swangle` 才开软件 WebGL）、`stills.mjs`、`sheet.py`、`gen_chars.py`。拷出来 `npm i`，`cat .browser` 那行换成 `ls -d /opt/pw-browsers/chromium_headless_shell-*/chrome-linux/headless_shell > .browser`，`node stills.mjs t0 default 1 4 8` 能出图就可以开工。
+默认音乐已经位于 `public/bgm.mp3`，复制模板即会带上。`Video.tsx` 使用 Remotion 的音轨组件，Studio 可试听，渲染 MP4 直接带音乐；默认渲染不需要另外安装系统 FFmpeg。
 
-依赖：remotion 4.0.533、React 19、@remotion/three、@react-three/fiber 9、three 0.170、@fontsource 的 noto-serif-sc / noto-sans-sc / cormorant-garamond / long-cang / zhi-mang-xing / ma-shan-zheng（毛笔片名）/ jetbrains-mono。
+## 工程骨架
 
-## 二、工程骨架（第 8 支）
+- `src/timeline.ts`：`FPS`、`DURATION`、字幕、HUD 和引用。字幕 `【】` 暖色高亮，`〖〗` 冷色；修改文本后运行 `npm run chars`。
+- `src/scenes.tsx`：两个示例场景，按分镜增加或拆分场景文件。模板只演示开场，不是完成的 175 秒作品。
+- `src/Video.tsx`：总装和全局叠层、默认音乐、淡入淡出。场景遮挡顺序与时间窗需检查；`--muted` 会禁用音乐，正式默认渲染不要使用该参数。
+- `src/ui.tsx`：字幕、HUD、引用卡、印章、摄影机、氛围粒子、颗粒与暗角等组件。
+- `src/fonts.ts`：本地 npm 字体资源预加载；`gen_chars.py` 收集源码中的汉字用于覆盖字库子集。
 
-- `src/timeline.ts`：`FPS=30`、`DURATION=175`；`captions`（`{s,e,text}`，`【】` 暖色高亮刀子、`〖〗` 冷色）、`huds`（左上大字+小字）、`cites`（右上：年份、拉丁名、标题、作者、印章「研究/报道/推测/猜想」）、转场时间点。**改台词只改这里。**
-- `src/Video.tsx`：全片总装。场景按 `<Scene s={} e={} />` 时间窗排列，**后出场的写在前面**，保证出场中的旧场景盖在新场景上面。全局叠层自下而上：场景 → `TopShade` → `CapShade` → `HudLayer` → `CiteLayer` → `Captions` → 水印 → `Vignette` → `Grain`，HUD 计数器放最上。BGM 和音效也可以在这里用 `<Audio volume={f=>...}>` 做压低。
-- `src/ui.tsx`：工具函数 `win(t,s,e,fi,fo)`（淡入淡出窗）、`ramp`、`easeOut/easeIO`、`hash`（确定性随机）、`mix`（混色）；组件 `Captions`（逐字浮现：每字延迟 0.028s、上移+去模糊；字号按字数自适应，最大 50；字幕下垫一块径向暗垫）、`Seal` 印章、`CiteLayer`、`FX`（场景进场 1.05 倍虚焦推到清晰，出场轻推再虚化）、`TopShade/CapShade`（顶部、底部暗带）、`camAt/camCss`（每场景虚拟摄影机，关键帧 `[t, cx, cy, zoom]`，zoom 几何插值）、`WordSnow/Motes`（氛围漂浮物）。
-- `src/scenes_a/b/c.tsx`：按时间段分文件写场景，每场景一个组件。
-- `src/fx.tsx`：招牌转场（第 8 支是声波扫过的 clip-path `WipeOut` + 一条细波线）。
-- `src/hud.tsx`：计数器暗线 + `preloadFonts()`。
-- 脚本：`render.sh`（分段渲染，可续渲）、`stills.mjs`（一次 bundle 抽多帧）、`sheet.py`（拼成带时间标签的联系表）、`gen_chars.py`（收集全部汉字给字体预加载）、`gen_clicks.py`（按屏幕计数器同一条曲线合成咔哒音轨）。
+更改 composition id 时同步调整 `Root.tsx`、`render.sh` 的默认 ID 和 `stills.mjs` 中的 id。更改时长或帧率时同步分镜、场景、音乐与抽帧范围。
 
-## 三、画面配方
+## 画面与素材
 
-- **每一帧至少三层**：背景环境（纸面/深海/夜色 + 氛围粒子）/ 主体具象物件 / 前景（粒子、光斑、词屑、笔）+ 至少一个在动的东西。全片唯一允许静止的，只有刻意设计的那一拍（比如楚门的盲点实验）。
-- **具象物件用 SVG/CSS 手写**：烧瓶、蜡烛、宇宙日历、胶片、计数器、同学录、钢板、麦克风、书页、印章……每场景一个主物件。**复杂具象物（人脸、人手、神兽、名画、马）不要手画**，用剪影、物件、背影代替，或用用户给的图。
-- **克隆阵列要逐个变化**：40 本同学录、几千张椅子、宫格里的奶蛙，大小、相位、颜色、样式都要错开，不然像复制粘贴。
-- **一个颜色只表达一个意思**（锈金=人、冷青=AI、暗红=那颗暗星），全片不改口。
-- **转场词汇**：一个招牌转场（快门、穿针、擦锈、布景板推拉、声波扫过）+ 匹配剪辑（上一场的形状变成下一场的形状）+ 章节扫光；在同一章里切镜头**依次淡出，不交叉叠化**（叠化会出重影、残留标签）。新片的招牌转场别和前几支撞。
-- **运镜**：每场都有缓推/拉远/横移；前景物件出现时背景虚化（景深 blur ≤3px）；一支片子里留一个「哇」镜头（从纸堆钻出看到一整片声波海）。
-- **主线信物**带拖尾在场景间飞，串起匹配剪辑。
-- **2.5D 优先**：线装书、布景板这类用 CSS `perspective` 就够，比 Three.js 便宜得多。
+先安排字幕和 HUD 安全区，再构建主体物件、背景环境和前景。粒子、运镜、配色和景深服务于叙事，留白可作为明确的设计选择。重复物件调整大小、角度、亮度或相位，避免无意义克隆。
 
-## 四、Three.js（能不用就不用）
+简单具象物可用 SVG/CSS；人脸、人手和复杂名画等优先用合适素材、剪影或简化造型。2.5D 能表达清楚时无需引入 Three.js。确实使用 Three.js 时先验证目标机器的渲染，按需要选择 `swangle`，不要将某台机器的速度作为通用承诺。
 
-- 用 `@remotion/three` 的 `ThreeCanvas`。渲染必须 `--gl=swangle`，每帧慢约 4 倍，所以**只给 3D 段开**，每段 ≤8 秒，少灯光少透明，用雾藏细节、假体积光圆锥、2D 焦散纹理；动画写成 `t` 的闭式函数。
-- 第 3、5、7、8 支全片没用 WebGL，效果照样够。远景爆炸增长交给 2D 粒子，3D 只画近处几层（InstancedMesh）。
+素材存入工程的 `public/`，通过 `staticFile()` 引用；确认字体加载后再将文字采样成粒子。动画使用 `useCurrentFrame()` 与确定性计算，避免 `Math.random()` 导致同一帧不同或分段接缝跳变。
 
-## 五、粒子和素材还原
-
-- 粒子用 2D canvas 画（第 1 支 4400 颗，叠加混合），不需要 swangle。
-- **用户给的图要高度还原**（第 5 支奶蛙）：`rembg` 的 `isnet-general-use` 抠图（视频逐帧抠，151 帧）→ 粒子按抠图**逐像素取色**、距离场当深度，转身时有厚度。白描线稿用 Canny + 轮廓 + 淡彩。脚本在奶蛙源码包 `tools/`（cut.py、cutv.py、lineart.py、prep.py），单张抠图可直接用 `scripts/cutout.py`。先出一段还原度样片给用户确认，再做全片。
-- 用户的 AI 二创图、抠好的图：直接贴图，不做粒子。贴在纸面上用 `mix-blend-mode: multiply`，名画加画框、射灯、玻璃反光，镜头缓推，要自然不违和。
-- 文字采样成粒子前，必须等字体加载完。
-
-## 六、抽帧自查（每做完一场就做）
+## 抽帧与渲染
 
 ```bash
-node stills.mjs a1 default 2 4.5 6 8      # 半尺寸 jpg 到 st/a1/，有 3D 段时第二个参数传 swangle
-python3 sheet.py st/a1 4                   # 拼成带时间标签的联系表，自己 Read 图看
+node stills.mjs check default 1 4 8.5
+npm run render
 ```
-自己看图，按 `references/review.md` 的清单查。全片做完后每 2 秒抽一张过一遍，结尾和反转处加密。
 
-## 七、渲染
+抽帧保存到 `st/check/`，为完整分辨率；需要软件 WebGL 时第二个参数使用 `swangle`。输出成片为 `out/hd.mp4`，默认准确 175 秒并包含音乐。已有文件同名输出会更新，重要旧版请先保存到不同文件名。
 
-- **分段渲染、可续渲**（`render.sh`）：按约 750 帧一段切，已渲完的段跳过；每段 `npx remotion render src/index.ts <Id> seg/NN.tmp.mp4 --frames=a-b --browser-executable="$BR" --muted --crf=16~18 --concurrency=4~6`，成功后再 `mv` 成正式名。有 3D 的段单独切出来加 `--gl=swangle`（第 4 支 render.sh 是样板）。拼接：`ffmpeg -f concat -safe 0 -i seg/list.txt -c copy`。
-- 速度参考：2D 约 3–6 帧/秒，swangle 段约 0.7–1 帧/秒，粒子重的片全片约 1 小时。
-- 后台命令有时限（默认 30 分钟会被掐），用 `run_in_background` 并把 timeout 设长，或干脆按段跑。渲染期间每隔一阵查 log 并 `update_status` 报「第几段/第几帧」。
-- **局部重渲**：只改了几秒，就按帧段重渲那几段（`seg_起-止.mp4`），再用 `scripts/splice2.py`（奶蛙用过的） 按帧覆盖拼回整片（后面的层覆盖前面的），不必全片重来。版心这种影响每一页的改动才全片重渲。
+渲染采用 Remotion 默认并发；按机器容量可用 `CONC=4 npm run render` 或 `GL=swangle npm run render`。每次渲染重新生成整片，避免误用修改前的片段；需要精确重渲局部时使用 CLI 的 `--frames=起帧-止帧`，保持参数、字体和版本一致。
 
-## 八、混音
+长任务应在宿主提供的持久终端、后台进程或调度器中运行，日志保存到当前工程。用实际帧数和日志报告进度，不假定某个任务 API 存在。运行时长取决于机器和场景，先渲染短样片估计。
 
-- BGM：`atrim=0:175`，`afade` 入 0.3 秒、出 171.5 起 3.5 秒。
-- 音效要和画面同源：咔哒音轨用 `gen_clicks.py` 从计数器同一条曲线、同一个 hash 生成；笑声用用户给的原音频。
-- 压低 BGM（ducking）：`volume='1-0.93*(梯形窗)':eval=frame`，每个窗 0.15 秒推入、0.3 秒推出；归零、大笑这种戏剧点可以硬停（0.06 秒淡出）。
-- 多路：`amix=inputs=N:normalize=0,alimiter=limit=0.95`，音效 `volume` 压在 BGM 下面，别像系统提示音。笑声叠成「千军万马」用 `asetrate` 微调音高错开几路。脚本样板：`scripts/mix.py`（奶蛙的笑声 + ducking）、`scripts/gen_clicks.py`（第 8 支按 `hud.tsx` 里 `KEYS` 曲线合成咔哒，换片要改它读的常量名）。
-- 混完用 `volumedetect` 抽查关键时间点的音量。
-
-## 九、出片和打包
+可选联系表工具需要 Python 3 与 Pillow：
 
 ```bash
-# 高清版：分段 CRF16–18 直接拼 + 混音，约 500–900MB
-# 分享版：约 150–180MB
-ffmpeg -i hd.mp4 -vf hqdn3d=1.5:1.5:4:4 -c:v libx264 -preset slow -b:v 7M -maxrate 9M -bufsize 14M -c:a copy -movflags +faststart 分享版.mp4
-# 源码包：不含 node_modules、seg、out、st
-tar czf 源码.tar.gz --exclude=node_modules --exclude=seg --exclude=out --exclude=st vN
+python3 -m pip install Pillow
+python3 sheet.py st/check 3
 ```
-噪点很吃码率，分享版加 hqdn3d。拷进共享文件夹后 `ls -la` 和 `ffprobe` 确认时长 175 秒、有音轨。
 
-## 十、踩过的坑
+成片审片应从最终 MP4 抽帧。以下额外命令需要系统 `ffmpeg` 和 `ffprobe` 在 PATH 中：
 
-1. **字体预加载**放在模块顶层的 `preloadFonts()`（`delayRender` + `document.fonts.load` 每个字重、全片所有汉字），不要放进组件里的 `delayRender`，会让 R3F 的 3D 画布整段不出图。新加文字后重跑 `gen_chars.py`。
-2. 数字一律 `fontVariantNumeric: 'lining-nums'`，否则显示成老式数字。
-3. SVG `<text>` 上不能用 `background-clip: text` 的渐变字，会变透明；SVG 里用 `fill`。
-4. `mix-blend-mode` 放在带 opacity/filter/transform 的父元素里会被隔离、不和底下混合；multiply 要放在 wrapper 上。
-5. `delayRender` 的句柄别起名 `h`，会遮蔽画布高度变量，粒子全没了。
-6. `interpolate` 参数别用 `Infinity`，会报错。
-7. 动画只依赖 `useCurrentFrame()` 和 `hash()`，**不用 `Math.random()`**，否则分段渲染接缝处会跳。
-8. 粒子画布超出 1920×1080 时，要用 FrogField 的 ox/oy/w/h 把画布开大，不然被裁。
-9. 舰队、船这类物件要高出水面，不然只看见烟囱（深海类场景注意遮挡关系）。
-10. `rm` 删目录可能被拦：抽帧换新目录名（v2s、v2b）。`pgrep -f` 会匹配到自己的命令行，等进程时别死循环。
-11. 容器连不上 edge-tts，做不了配音（反正不配音）。
-12. 大文件塞 `attached_outputs` 会失败（800MB+），只给路径。
-13. 渐变字（`background-clip: text` + `color: transparent`）加在父元素上、子元素逐字带 `transform`/`filter` 动画时，整行字会变透明。渐变样式要加在每个字的 span 上（起手工程 `scenes.tsx` 的片名就是这么写的）。
+```bash
+mkdir -p st/final
+ffmpeg -i out/hd.mp4 -vf fps=1/2 st/final/frame_%04d.jpg
+ffprobe -v error -show_entries format=duration:stream=codec_type,width,height,avg_frame_rate -of json out/hd.mp4
+```
+
+## 默认音乐与可选音效
+
+`public/bgm.mp3` 为随附音乐原文件，约 175.073 秒。默认 175 秒视频自动截取开头 175 秒，开始 0.3 秒淡入、结束前 3.5 秒淡出。替换同名文件即可换配乐。缩短视频会截取音乐，长于音乐时不会自动循环；需要长配乐应另行替换或设计循环。根据试听结果确定高潮和转折，不预设音乐段落。
+
+以下命令中的 `../vibe-video/scripts/` 假定工作目录中同时放有下载的 `vibe-video/` skill 和复制后的 `video-project/`；其他布局请使用自己安装目录中脚本的实际路径。
+
+- **合成咔哒**（仅需 Python 标准库）：`python3 ../vibe-video/scripts/gen_clicks.py public/clicks.wav 3.2 4.5 12 --duration 175`。参数是显式秒数，可从分镜导出同一份时间表用于声画对齐，不读取假定存在的 `hud.tsx`。
+- **后期混音**（需要系统 FFmpeg/ffprobe）：先渲染静音画面 `npx remotion render src/index.ts Film out/silent.mp4 --muted`，再执行 `python3 ../vibe-video/scripts/mix.py out/silent.mp4 out/mixed.mp4`。默认使用当前工程的 `public/bgm.mp3`；`--bgm 路径` 可替换。
+- **加入音效**：`mix.py` 可加 `--effects effects.json`，JSON 为数组，例如 `[ {"file": "public/clicks.wav", "start": 0, "volume": 0.25} ]`。每个文件从指定时间播放，音量独立设置，默认 BGM 淡入淡出并限制混音峰值；不依赖任何笑声音轨，也不自动套用旧片的压低时间窗。
+- **局部拼接**（需要系统 FFmpeg/ffprobe）：`python3 ../vibe-video/scripts/splice2.py out/hd.mp4 out/revised_silent.mp4 seg_30-59.mp4`。片段包含起止帧，必须与原片宽高、帧率一致；参数靠后的片段覆盖先前片段。输出静音视频，之后重新混音。
+- **抠图**（可选）：安装 `rembg`、`onnxruntime` 和 Pillow，运行 `python3 ../vibe-video/scripts/cutout.py public/cutout image.png`。模型首次使用可能需要下载；不影响默认制作流程。
+
+混音和拼接脚本不会覆盖现有输出文件，重新生成时选择新文件名。音效应贴合画面并避免削波，最终结果必须试听。
+
+## 出片与打包
+
+分享版按实际平台要求调整码率和尺寸，不承诺固定文件大小。以下示例需要系统 FFmpeg：
+
+```bash
+ffmpeg -i out/hd.mp4 -c:v libx264 -crf 23 -c:a aac -movflags +faststart out/share.mp4
+```
+
+从工作目录的上一级打包工程，保留 `public/` 音乐和素材、源码与锁文件，排除依赖和生成目录：
+
+```bash
+tar --exclude=node_modules --exclude=seg --exclude=out --exclude=st -czf video-project-source.tar.gz video-project
+```
+
+成片验证方法见 [review.md](review.md)。记录实际完成的检查，不把预览可用或命令退出成功等同于全片审阅通过。
+
+## 常见问题
+
+字体预加载调用位于模块顶层，新增文字后重新收集汉字；数字用 `fontVariantNumeric: 'lining-nums'`。SVG 文本渐变使用 `fill`；HTML 渐变字若逐字带 transform/filter，渐变样式加在每个字的 span 上。带 opacity/filter/transform 的父级可能隔离 `mix-blend-mode`，需检查实际合成结果。
+
+帧驱动动画必须可重放；避免使用无限插值端点。粒子画布超出画面时调整尺寸和采样偏移，不能引用未提供的组件。文件交付使用宿主实际支持的链接或附件方式，大文件应保存在用户可访问的位置。
