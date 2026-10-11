@@ -1,0 +1,31 @@
+{
+  "name": "vibe-video-starter",
+  "version": "1.0.0",
+  "private": true,
+  "description": "vibe 视频起手工程：175 秒、1920×1080、30fps、纯字幕",
+  "scripts": {
+    "studio": "remotion studio src/index.ts",
+    "chars": "python3 gen_chars.py",
+    "render": "bash render.sh"
+  },
+  "dependencies": {
+    "@fontsource/cormorant-garamond": "^5.3.0",
+    "@fontsource/jetbrains-mono": "^5.3.0",
+    "@fontsource/long-cang": "^5.3.0",
+    "@fontsource/noto-sans-sc": "^5.3.0",
+    "@fontsource/noto-serif-sc": "^5.3.0",
+    "@fontsource/zhi-mang-xing": "^5.3.0",
+    "@react-three/fiber": "^9.8.1",
+    "@remotion/bundler": "^4.0.533",
+    "@remotion/cli": "^4.0.533",
+    "@remotion/renderer": "^4.0.533",
+    "@remotion/three": "^4.0.533",
+    "@types/react": "^19.3.0",
+    "@types/three": "^0.170.0",
+    "react": "^19.3.0",
+    "react-dom": "^19.3.0",
+    "remotion": "^4.0.533",
+    "three": "^0.170.0",
+    "typescript": "^5.6.0"
+  }
+}
