@@ -24,6 +24,7 @@ npm run render
 - `src/scenes.tsx`：两个示例场景；添加全片所需场景。
 - `src/Video.tsx`：场景与叠层总装，以及音乐淡入淡出。
 - `src/ui.tsx` / `src/fonts.ts`：视觉组件和字体预加载。
+- `src/assets.tsx` / `src/three/actors.tsx`：AI 生成的图片和动图在 2D 层、3D 舞台中的组件；`src/imgs.ts`、`src/clips.json` 由 skill 的 `prep_images.py`、`prep_clip.py` 生成，素材入库前为空。
 - `public/bgm.mp3`：默认音乐，约 175.073 秒；直接替换同名文件可换音乐。
 
 拼联系表需要 Python 3 和 Pillow：`python3 -m pip install Pillow`，然后运行 `python3 sheet.py st/check 3`。可选音效、混音和局部拼接工具见 skill 的制作手册；它们需要额外依赖，不影响默认渲染。
