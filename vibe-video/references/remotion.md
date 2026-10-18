@@ -32,9 +32,33 @@ npm run studio
 
 先安排字幕和 HUD 安全区，再构建主体物件、背景环境和前景。粒子、运镜、配色和景深服务于叙事，留白可作为明确的设计选择。重复物件调整大小、角度、亮度或相位，避免无意义克隆。
 
-简单具象物可用 SVG/CSS；人脸、人手和复杂名画等优先用合适素材、剪影或简化造型。2.5D 能表达清楚时无需引入 Three.js。确实使用 Three.js 时先验证目标机器的渲染，按需要选择 `swangle`，不要将某台机器的速度作为通用承诺。
+简单几何和信息层用 SVG/CSS；角色、道具、场景和专业知识图用 AI 生图，分工和清单写法见 [AI 生图与动图素材指南](ai-assets.md)。2.5D 能表达清楚时无需引入 Three.js。确实使用 Three.js 时先验证目标机器的渲染，按需要选择 `swangle`，不要将某台机器的速度作为通用承诺。
 
-素材存入工程的 `public/`，通过 `staticFile()` 引用；确认字体加载后再将文字采样成粒子。动画使用 `useCurrentFrame()` 与确定性计算，避免 `Math.random()` 导致同一帧不同或分段接缝跳变。
+素材存入工程的 `public/`，通过 `staticFile()` 引用；确认字体加载后再将文字采样成粒子。
+
+AI 素材入库后（`prep_images.py` 写 `public/cut/` 和 `src/imgs.ts`，`prep_clip.py` 写 `public/anim/` 和 `src/clips.json`），用起手工程的组件上片：
+
+```tsx
+import {Plate, ClipPlate, clipFrame, squash, dropY, grade} from './assets';
+import {Stage, Cam, Actor, ClipActor} from './three/actors';
+
+// 2D：脚底锚点、落地回弹、接触阴影；动图按帧号取帧
+const sq = squash(t, 2.4);
+<Plate name="i06" pose={{x: 960, y: 540, h: 1080, filter: grade({blur: 6, bright: 0.8})}} />
+<Plate name="poop_gold" pose={{x: 960, y: 860 - dropY(t, 2, 2.4, 300), h: 320, ay: 1, sx: sq.sx, sy: sq.sy, shadow: 0.5}} />
+<ClipPlate clip="panda" frame={clipFrame('panda', t - 3)} pose={{x: 1400, y: 900, h: 380, ay: 1, shadow: 0.4}} />
+
+// 3D：纸片演员站在地面上，镜头移动产生视差
+<Stage bg="#0b1220">
+  <ambientLight intensity={0.6} />
+  <directionalLight position={[3, 5, 4]} intensity={1.4} />
+  <Cam p={[Math.sin(t * 0.3), 1.4, 5]} look={[0, 0.8, 0]} />
+  <Actor name="poop_gold" pos={[-0.9, 0, 0]} h={1} />
+  <ClipActor clip="panda" frame={clipFrame('panda', t)} pos={[0.6, 0, -0.5]} h={1.4} />
+</Stage>
+```
+
+图片名来自入库时的英文名。用 `Img`/`useLoader` 加载，渲染器会等图片就绪再截帧；不要用 CSS 背景图或手写的 `delayRender` 加载素材。3D 场景在某些机器上需要 `GL=swangle`。动画使用 `useCurrentFrame()` 与确定性计算，避免 `Math.random()` 导致同一帧不同或分段接缝跳变。
 
 ## 抽帧与渲染
 
@@ -74,7 +98,9 @@ ffprobe -v error -show_entries format=duration:stream=codec_type,width,height,av
 - **后期混音**（需要系统 FFmpeg/ffprobe）：先渲染静音画面 `npx remotion render src/index.ts Film out/silent.mp4 --muted`，再执行 `python3 ../vibe-video/scripts/mix.py out/silent.mp4 out/mixed.mp4`。默认使用当前工程的 `public/bgm.mp3`；`--bgm 路径` 可替换。
 - **加入音效**：`mix.py` 可加 `--effects effects.json`，JSON 为数组，例如 `[ {"file": "public/clicks.wav", "start": 0, "volume": 0.25} ]`。每个文件从指定时间播放，音量独立设置，默认 BGM 淡入淡出并限制混音峰值；不依赖任何笑声音轨，也不自动套用旧片的压低时间窗。
 - **局部拼接**（需要系统 FFmpeg/ffprobe）：`python3 ../vibe-video/scripts/splice2.py out/hd.mp4 out/revised_silent.mp4 seg_30-59.mp4`。片段包含起止帧，必须与原片宽高、帧率一致；参数靠后的片段覆盖先前片段。输出静音视频，之后重新混音。
-- **抠图**（可选）：安装 `rembg`、`onnxruntime` 和 Pillow，运行 `python3 ../vibe-video/scripts/cutout.py public/cutout image.png`。模型首次使用可能需要下载；不影响默认制作流程。
+- **抠图**（可选）：安装 `rembg`、`onnxruntime` 和 Pillow，运行 `python3 ../vibe-video/scripts/cutout.py public/cutout image.png`。模型首次使用可能需要下载；不影响默认制作流程。AI 生图最好直接生成纯色背景再抠成透明 PNG，这个脚本用于补救没有透明通道的图。
+- **素材入库**：`prep_images.py`（需要 Pillow）和 `prep_clip.py`（需要 numpy、opencv-python-headless、Pillow 和系统 FFmpeg），用法见 [素材指南](ai-assets.md#五素材入库)。
+- **调整音乐速度**：内容塞不下又不想删时，可以把配乐整体放慢，例如 `ffmpeg -i public/bgm.mp3 -filter:a atempo=0.85 public/bgm_slow.mp3`（保持音高）；片长随之变成原长 ÷ 0.85，`DURATION` 和所有卡点时间同样除以 0.85。
 
 混音和拼接脚本不会覆盖现有输出文件，重新生成时选择新文件名。音效应贴合画面并避免削波，最终结果必须试听。
 

@@ -1,6 +1,6 @@
 # vibe-video · 通用动画视频制作 Skill
 
-基于 Remotion 制作中文知识动画短片，覆盖选题、分镜脚本、画面制作、渲染、审片和发布文案。自带独立工程与默认 175 秒背景音乐，不需要原项目文件或历史聊天。
+基于 Remotion 制作中文知识动画短片，覆盖选题、分镜脚本、AI 生图与动图素材、画面制作、渲染、审片和发布文案。自带独立工程与默认 175 秒背景音乐，不需要原项目文件或历史聊天。
 
 ## 安装 Skill
 
@@ -47,15 +47,21 @@ Linux 需安装浏览器依赖的系统库，详见 [Remotion Linux 依赖说明
 | 资源 | 用途 |
 |---|---|
 | [`vibe-video/SKILL.md`](vibe-video/SKILL.md) | 通用制作流程与默认参数 |
-| [`references/`](vibe-video/references/) | 制作手册、脚本标准和成片审阅清单 |
-| [`assets/starter/`](vibe-video/assets/starter/) | Remotion 工程、组件、字体配置和默认音乐 |
-| [`scripts/`](vibe-video/scripts/) | 通用混音、咔哒音效、局部拼接、抠图 |
+| [`references/`](vibe-video/references/) | 制作手册、脚本标准、成片审阅清单和 [AI 生图与动图素材指南](vibe-video/references/ai-assets.md) |
+| [`assets/starter/`](vibe-video/assets/starter/) | Remotion 工程、组件（含 AI 图片/动图的 2D 与 3D 组件）、字体配置和默认音乐 |
+| [`scripts/`](vibe-video/scripts/) | 素材入库（静图裁边命名、动图解码补洞打包）、通用混音、咔哒音效、局部拼接、抠图 |
 | [`skill.zip`](skill.zip) | 可安装的完整 skill 包，含音乐与依赖锁文件 |
 
-默认渲染只需 Node.js/npm；文字收集需要 Python 3。联系表需要 Pillow；后期混音、成片抽帧和局部拼接需要 PATH 中的系统 FFmpeg/ffprobe；抠图需要 rembg、onnxruntime 与 Pillow。详细用法见 [制作手册](vibe-video/references/remotion.md)。
+默认渲染只需 Node.js/npm；文字收集需要 Python 3。联系表需要 Pillow；后期混音、成片抽帧和局部拼接需要 PATH 中的系统 FFmpeg/ffprobe；抠图需要 rembg、onnxruntime 与 Pillow；静图入库需要 Pillow；动图入库需要 numpy、opencv-python-headless、Pillow 和系统 FFmpeg。详细用法见 [制作手册](vibe-video/references/remotion.md)。
 
 ## 验证
 
-工具自检：`python3 -m unittest discover -s tests -v`。其中混音和拼接集成检查需要系统 FFmpeg/ffprobe，没有时明确跳过；音效时序和输入校验使用 Python 标准库即可检查。
+工具自检：`python3 -m unittest discover -s tests -v`。其中混音、拼接和动图入库检查需要系统 FFmpeg/ffprobe（动图入库另需 numpy 与 opencv-python-headless），没有时明确跳过；音效时序和输入校验使用 Python 标准库即可检查。
 
-本次在 macOS 的全新临时工程验证：依赖安装、从 `skill.zip` 解压后执行 `npm ci`、TypeScript 检查、中文全尺寸抽帧，以及通过 `npm run render` 输出完整 175 秒、1920×1080、30fps、5250 帧且含默认音乐的模板视频。工具测试覆盖音效时序、输入校验、混音、按帧覆盖和压缩包一致性。Linux/Windows 未做实机验证。
+本次在 macOS 的全新临时工程验证：依赖安装、从 `skill.zip` 解压后执行 `npm ci`、TypeScript 检查、中文全尺寸抽帧，以及通过 `npm run render` 输出完整 175 秒、1920×1080、30fps、5250 帧且含默认音乐的模板视频。工具测试覆盖音效时序、输入校验、混音、按帧覆盖、素材入库和压缩包一致性。Linux/Windows 未做实机验证。
+
+## AI 生图与动图
+
+角色、道具、场景和专业知识图（如消化道、细胞、地质剖面）交给 AI 生图，代码负责动效、数据、文字和转场；只有物体 360° 转身、角色表情手势这类代码做不出的动作才做 AI 动图。分镜脚本末尾附生图清单和动图清单，每张写好中英文提示词。详见 [素材指南](vibe-video/references/ai-assets.md)。
+
+2026-10 在 Linux 容器内验证：`prep_images.py`、`prep_clip.py` 处理了一套实际制作用的 AI 静图、透明 WebM、ProRes 4444 MOV 和绿幕 MP4；`src/assets.tsx` 与 `src/three/actors.tsx` 通过 TypeScript 检查，并用 Remotion 渲染了 2D 图片、动图图集和 3D 纸片演员的测试帧。
