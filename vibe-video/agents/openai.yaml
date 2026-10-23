@@ -1,0 +1,4 @@
+interface:
+  display_name: "Vibe Videos"
+  short_description: "从脚本批量生图、按优先级生成动图，用户验收后自动整理未压缩素材文件夹"
+  default_prompt: "使用 $vibe-video 读取我的分镜脚本，批量生成图片并按预设优先级尝试动图，给我查看验收后自动整理未压缩交付文件夹。"

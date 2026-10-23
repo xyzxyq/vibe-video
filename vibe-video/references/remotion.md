@@ -98,7 +98,7 @@ ffprobe -v error -show_entries format=duration:stream=codec_type,width,height,av
 - **后期混音**（需要系统 FFmpeg/ffprobe）：先渲染静音画面 `npx remotion render src/index.ts Film out/silent.mp4 --muted`，再执行 `python3 ../vibe-video/scripts/mix.py out/silent.mp4 out/mixed.mp4`。默认使用当前工程的 `public/bgm.mp3`；`--bgm 路径` 可替换。
 - **加入音效**：`mix.py` 可加 `--effects effects.json`，JSON 为数组，例如 `[ {"file": "public/clicks.wav", "start": 0, "volume": 0.25} ]`。每个文件从指定时间播放，音量独立设置，默认 BGM 淡入淡出并限制混音峰值；不依赖任何笑声音轨，也不自动套用旧片的压低时间窗。
 - **局部拼接**（需要系统 FFmpeg/ffprobe）：`python3 ../vibe-video/scripts/splice2.py out/hd.mp4 out/revised_silent.mp4 seg_30-59.mp4`。片段包含起止帧，必须与原片宽高、帧率一致；参数靠后的片段覆盖先前片段。输出静音视频，之后重新混音。
-- **抠图**（可选）：安装 `rembg`、`onnxruntime` 和 Pillow，运行 `python3 ../vibe-video/scripts/cutout.py public/cutout image.png`。模型首次使用可能需要下载；不影响默认制作流程。AI 生图最好直接生成纯色背景再抠成透明 PNG，这个脚本用于补救没有透明通道的图。
+- **抠图**（可选）：安装 `rembg`、`onnxruntime` 和 Pillow，运行 `python3 ../vibe-video/scripts/cutout.py public/cutout image.png`。模型首次使用可能需要下载；不影响默认制作流程。内置生图优先直接请求透明背景；这个脚本用于用户接受本地处理时补救没有透明通道的图。
 - **素材入库**：`prep_images.py`（需要 Pillow）和 `prep_clip.py`（需要 numpy、opencv-python-headless、Pillow 和系统 FFmpeg），用法见 [素材指南](ai-assets.md#五素材入库)。
 - **调整音乐速度**：内容塞不下又不想删时，可以把配乐整体放慢，例如 `ffmpeg -i public/bgm.mp3 -filter:a atempo=0.85 public/bgm_slow.mp3`（保持音高）；片长随之变成原长 ÷ 0.85，`DURATION` 和所有卡点时间同样除以 0.85。
 
@@ -112,10 +112,15 @@ ffprobe -v error -show_entries format=duration:stream=codec_type,width,height,av
 ffmpeg -i out/hd.mp4 -c:v libx264 -crf 23 -c:a aac -movflags +faststart out/share.mp4
 ```
 
-从工作目录的上一级打包工程，保留 `public/` 音乐和素材、源码与锁文件，排除依赖和生成目录：
+用户查看并验收后，自动整理普通交付文件夹，默认不压缩。素材按[批量素材流程](batch-assets.md#5-验收后自动打包不压缩)使用明确接受的文件清单；完整工程保留 `public/` 音乐和素材、源码与锁文件，排除依赖和生成目录。下例复制工程到新目录，不覆盖已有交付：
 
 ```bash
-tar --exclude=node_modules --exclude=seg --exclude=out --exclude=st -czf video-project-source.tar.gz video-project
+python3 - <<'PY'
+import shutil
+shutil.copytree('video-project', 'video-project-source',
+                ignore=shutil.ignore_patterns('node_modules', 'seg', 'out', 'st',
+                                             '.git', '.DS_Store', '._*', '__pycache__', '.env', '.env.*'))
+PY
 ```
 
 成片验证方法见 [review.md](review.md)。记录实际完成的检查，不把预览可用或命令退出成功等同于全片审阅通过。

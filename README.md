@@ -1,14 +1,27 @@
-# vibe-video · 通用动画视频制作 Skill
+# Vibe Videos · 脚本批量素材与动画视频制作 Skill
 
-基于 Remotion 制作中文知识动画短片，覆盖选题、分镜脚本、AI 生图与动图素材、画面制作、渲染、审片和发布文案。自带独立工程与默认 175 秒背景音乐，不需要原项目文件或历史聊天。
+给一份脚本，使用内置 AI 生图逐项制作素材，按预设优先级尝试动图，提供总览给用户查看验收，随后自动整理未压缩交付文件夹。也保留基于 Remotion 的完整中文知识动画制作、修改、渲染与审片流程，自带独立工程和默认175秒背景音乐。
+
+## 脚本批量制作
+
+直接对支持内置生图的智能体说：
+
+> 使用 $vibe-video，读取我的分镜脚本，批量生成全部图片组件。动图优先使用 Hugging Face ZeroGPU，其次尝试 PixVerse 已确认的免费额度，360P。给我查看验收后自动整理到普通文件夹，不需要压缩。
+
+1. 解析脚本编号、变体、复用素材及必做/建议/可选动作，保存可续作清单。
+2. 内置生图按依赖分批逐项调用，固定角色与道具参考，保存提示词、文件及原生/交付尺寸。
+3. 按渠道优先级生成动图；额度不足保存进度，不自动充值、不把二维备用版冒充模型结果。
+4. 生成静图和可播放动图总览；用户验收后，自动复制接受版本并核对 SHA-256。
+
+详细规则和清单结构见[批量素材流程](vibe-video/references/batch-assets.md)。内置生图由活跃智能体会话编排，本地 Python 工具不调用生成 API，也不代替用户验收。只做素材无需安装 Remotion。
 
 ## 安装 Skill
 
-1. 下载并解压 [skill.zip](skill.zip)。
-2. 将解压后的 `vibe-video/` 放入所用 AI 工具的 skills 目录；Codex 默认用户目录为 `~/.codex/skills/`。
-3. 使用 `vibe-video`，例如：“制作一部关于友谊悖论的知识动画，使用默认背景音乐，先给出分镜脚本。”
+1. 克隆本仓库：`git clone https://github.com/xyzxyq/vibe-video.git`。
+2. 将仓库内的 `vibe-video/` 子目录复制到所用 AI 工具的 skills 目录；Codex 默认用户目录为 `~/.codex/skills/`。更新已有安装时先备份原目录。
+3. 使用 `$vibe-video` 提供脚本，或要求制作完整视频。
 
-也可以克隆仓库，并直接读取 [`vibe-video/SKILL.md`](vibe-video/SKILL.md)。压缩包与仓库内的 skill 文件同步维护。
+也可以直接读取 [`vibe-video/SKILL.md`](vibe-video/SKILL.md)。以仓库内的完整 skill 文件夹为安装源；不再维护重复的 `skill.zip`。
 
 ## 独立运行起手工程
 
@@ -49,8 +62,8 @@ Linux 需安装浏览器依赖的系统库，详见 [Remotion Linux 依赖说明
 | [`vibe-video/SKILL.md`](vibe-video/SKILL.md) | 通用制作流程与默认参数 |
 | [`references/`](vibe-video/references/) | 制作手册、脚本标准、成片审阅清单和 [AI 生图与动图素材指南](vibe-video/references/ai-assets.md) |
 | [`assets/starter/`](vibe-video/assets/starter/) | Remotion 工程、组件（含 AI 图片/动图的 2D 与 3D 组件）、字体配置和默认音乐 |
-| [`scripts/`](vibe-video/scripts/) | 素材入库（静图裁边命名、动图解码补洞打包）、通用混音、咔哒音效、局部拼接、抠图 |
-| [`skill.zip`](skill.zip) | 可安装的完整 skill 包，含音乐与依赖锁文件 |
+| [`scripts/`](vibe-video/scripts/) | 总览与验收后打包、素材入库、混音、音效、拼接、抠图 |
+| [`deliver_assets.py`](vibe-video/scripts/deliver_assets.py) | 仅用 Python 3.9+ 标准库生成本地预览、验证验收快照并复制未压缩交付文件夹 |
 
 默认渲染只需 Node.js/npm；文字收集需要 Python 3。联系表需要 Pillow；后期混音、成片抽帧和局部拼接需要 PATH 中的系统 FFmpeg/ffprobe；抠图需要 rembg、onnxruntime 与 Pillow；静图入库需要 Pillow；动图入库需要 numpy、opencv-python-headless、Pillow 和系统 FFmpeg。详细用法见 [制作手册](vibe-video/references/remotion.md)。
 
@@ -58,7 +71,9 @@ Linux 需安装浏览器依赖的系统库，详见 [Remotion Linux 依赖说明
 
 工具自检：`python3 -m unittest discover -s tests -v`。其中混音、拼接和动图入库检查需要系统 FFmpeg/ffprobe（动图入库另需 numpy 与 opencv-python-headless），没有时明确跳过；音效时序和输入校验使用 Python 标准库即可检查。
 
-本次在 macOS 的全新临时工程验证：依赖安装、从 `skill.zip` 解压后执行 `npm ci`、TypeScript 检查、中文全尺寸抽帧，以及通过 `npm run render` 输出完整 175 秒、1920×1080、30fps、5250 帧且含默认音乐的模板视频。工具测试覆盖音效时序、输入校验、混音、按帧覆盖、素材入库和压缩包一致性。Linux/Windows 未做实机验证。
+历史版本曾在 macOS 临时工程验证依赖安装、TypeScript检查、中文抽帧与完整175秒模板渲染；这些不代表每次发布都重新渲染。本次新增测试覆盖验收门槛、待定项、文件/清单变更、路径越界、符号链接、重复文件名、已有目录保护、预览文本转义与交付哈希。测试使用本地夹具，不消耗云端生成额度，也不证明真实模型动作质量。Linux/Windows本次未做实机验证。
+
+2026-10-23 验证：14项测试中13项通过，1项动图入库回归因缺少 OpenCV 跳过；新增10项交付测试全部通过，Skill格式校验通过。实际PNG/WebM的本地总览已在浏览器检查图片加载、透明显示、背景切换与播放控件。本次未重新生成云端图片/视频，也未重新渲染175秒工程。
 
 ## AI 生图与动图
 

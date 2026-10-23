@@ -6,7 +6,6 @@ import sys
 import tempfile
 import unittest
 import wave
-import zipfile
 from pathlib import Path
 
 SCRIPTS = Path(__file__).resolve().parents[1] / 'vibe-video' / 'scripts'
@@ -24,16 +23,6 @@ class ToolsTest(unittest.TestCase):
         else:
             self.assertNotEqual(result.returncode, 0)
         return result
-
-    def test_install_archive_matches_skill(self):
-        root = SCRIPTS.parents[1]
-        skill = root / 'vibe-video'
-        expected = {str(p.relative_to(root)): p.read_bytes() for p in skill.rglob('*') if p.is_file() and not p.name.startswith('._') and '__pycache__' not in p.parts}
-        with zipfile.ZipFile(root / 'skill.zip') as archive:
-            actual = {i.filename: archive.read(i) for i in archive.infolist() if not i.is_dir()}
-            self.assertEqual(actual.keys(), expected.keys())
-            self.assertTrue(all(actual[name] == data for name, data in expected.items()))
-            self.assertTrue((archive.getinfo('vibe-video/assets/starter/render.sh').external_attr >> 16) & 0o111)
 
     def test_click_timing_and_invalid_input(self):
         out = self.dir / 'clicks.wav'
@@ -63,7 +52,7 @@ class ToolsTest(unittest.TestCase):
         spliced = self.dir / 'spliced.mp4'
         self.run_script('splice2.py', base, spliced, patch)
         self.assertEqual(int(probe(spliced)['streams'][0]['nb_read_frames']), 30)
-        pixels = subprocess.check_output(['ffmpeg', '-v', 'error', '-i', str(spliced), '-vf', "select='eq(n,0)+eq(n,10)+eq(n,20)',scale=1:1", '-vsync', '0', '-f', 'rawvideo', '-pix_fmt', 'rgb24', '-'])
+        pixels = subprocess.check_output(['ffmpeg', '-v', 'error', '-i', str(spliced), '-vf', "select='eq(n,0)+eq(n,10)+eq(n,20)',scale=1:1", '-fps_mode', 'passthrough', '-f', 'rawvideo', '-pix_fmt', 'rgb24', '-'])
         self.assertEqual(len(pixels), 9)
         self.assertGreater(pixels[0], pixels[2])
         self.assertGreater(pixels[5], pixels[3])
@@ -105,9 +94,9 @@ class ToolsTest(unittest.TestCase):
         (self.dir / 'map.csv').write_text('01,poop_gold\n', encoding='utf-8')
         (self.dir / 'src').mkdir()
         r = self.run_script('prep_images.py', src, self.dir, '--map', self.dir / 'map.csv', '--pad', 4, '--sheet', self.dir / 'sheet.jpg')
-        self.assertEqual(Image.open(self.dir / 'sheet.jpg').size, (1920, 300))
-        self.assertEqual(Image.open(self.dir / 'public/cut/poop_gold.png').size, (208, 108))
-        self.assertEqual(Image.open(self.dir / 'public/cut/i06.png').size, (320, 180))
+        for path, size in [('sheet.jpg', (1920, 300)), ('public/cut/poop_gold.png', (208, 108)), ('public/cut/i06.png', (320, 180))]:
+            with Image.open(self.dir / path) as image:
+                self.assertEqual(image.size, size)
         self.assertTrue((self.dir / 'public/cut/i28a.png').exists())
         ts = (self.dir / 'src/imgs.ts').read_text(encoding='utf-8')
         self.assertIn('poop_gold: 1.9259', ts)
